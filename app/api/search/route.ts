@@ -1,22 +1,58 @@
+
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2023-10-16",
+});
 
-  const q = searchParams.get("q") || "iphone";
-  const gl = searchParams.get("gl") || "de";
-  const hl = searchParams.get("hl") || "en";
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
 
-  const res = await fetch(
-    `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(q)}&gl=${gl}&hl=${hl}&api_key=${process.env.SERPAPI_API_KEY}`
-  );
+    const amount = Math.round(Number(body.amount) * 100);
 
-  const data = await res.json();
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
 
-  const results = (data.shopping_results || []).sort(
-    (a: any, b: any) =>
-      (a.extracted_price || 9999999) - (b.extracted_price || 9999999)
-  );
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
 
-  return NextResponse.json({ results });
+            product_data: {
+              name: `Beylens Fee - ${body.title}`,
+
+              images: body.image ? [body.image] : [],
+
+              description:
+                "Secure access to official seller with Beylens.",
+            },
+
+            unit_amount: amount,
+          },
+
+          quantity: 1,
+        },
+      ],
+
+      success_url: `${process.env.NEXT_PUBLIC_URL}/success?url=${encodeURIComponent(
+        body.sellerUrl
+      )}`,
+
+      cancel_url: `${process.env.NEXT_PUBLIC_URL}`,
+    });
+
+    return NextResponse.json({
+      id: session.id,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return NextResponse.json(
+      { error: "Stripe Checkout Error" },
+      { status: 500 }
+    );
+  }
 }
