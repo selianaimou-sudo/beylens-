@@ -2,133 +2,210 @@
 
 import { useEffect, useState } from "react";
 
-const dict: any = {
-  en: { search: "Search", placeholder: "Search any product...", price: "Product price", fee: "Beylens fee", total: "Total shown", details: "Details", unlock: "Pay fee & unlock seller link", close: "Close", store: "Store" },
-  fr: { search: "Rechercher", placeholder: "Rechercher un produit...", price: "Prix du produit", fee: "Frais Beylens", total: "Prix affiché", details: "Détails", unlock: "Payer les frais et ouvrir le lien", close: "Fermer", store: "Magasin" },
-  de: { search: "Suchen", placeholder: "Produkt suchen...", price: "Produktpreis", fee: "Beylens-Gebühr", total: "Angezeigter Preis", details: "Details", unlock: "Gebühr zahlen und Link öffnen", close: "Schließen", store: "Shop" },
-  ar: { search: "ابحث", placeholder: "ابحث عن أي منتج...", price: "سعر المنتج", fee: "عمولة Beylens", total: "السعر المعروض", details: "التفاصيل", unlock: "ادفع العمولة وافتح الرابط", close: "إغلاق", store: "المتجر" },
+const translations: any = {
+  en: {
+    title: "Best Opportunity",
+    region: "Region: Global 🌍",
+    placeholder: "Search for any product...",
+    button: "Search Best Price",
+    searching: "Searching global markets...",
+    available: "Global stock available",
+    details: "View Details",
+    original: "Original Price",
+    total: "Your Price",
+    fee: "Beylens Fee",
+    message: "Good news! Beylens fee is shown clearly before unlocking the deal.",
+    unlock: "Unlock Deal",
+  },
+  de: {
+    title: "Best Opportunity",
+    region: "Region: Deutschland 🇩🇪",
+    placeholder: "Produkt suchen...",
+    button: "Besten Preis suchen",
+    searching: "Suche auf europäischen Märkten...",
+    available: "Verfügbar",
+    details: "Details anzeigen",
+    original: "Originalpreis",
+    total: "Dein Preis",
+    fee: "Beylens Gebühr",
+    message: "Die Beylens-Gebühr wird vor dem Freischalten klar angezeigt.",
+    unlock: "Deal freischalten",
+  },
+  fr: {
+    title: "Best Opportunity",
+    region: "Région: France 🇫🇷",
+    placeholder: "Rechercher un produit...",
+    button: "Chercher le meilleur prix",
+    searching: "Recherche sur les marchés européens...",
+    available: "Disponible",
+    details: "Voir les détails",
+    original: "Prix original",
+    total: "Votre prix",
+    fee: "Frais Beylens",
+    message: "Les frais Beylens sont clairement affichés avant le déblocage.",
+    unlock: "Débloquer l’offre",
+  },
+  ar: {
+    title: "Best Opportunity",
+    region: "المنطقة: حسب لغة المتصفح 🌍",
+    placeholder: "ابحث عن أي منتج...",
+    button: "ابحث عن أفضل سعر",
+    searching: "جاري البحث في الأسواق...",
+    available: "متوفر",
+    details: "عرض التفاصيل",
+    original: "السعر الأصلي",
+    total: "السعر المعروض",
+    fee: "عمولة Beylens",
+    message: "عمولة Beylens تظهر بوضوح قبل فتح العرض.",
+    unlock: "فتح العرض",
+  },
 };
 
 function getFee(price: number) {
-  if (!price || price < 3) return 0.5;
-  if (price <= 50) return 1.5;
-  if (price <= 500) return 2.99;
-  if (price <= 1000) return 4.99;
-  return 6.99;
-}
-
-function countryFromLang(lang: string) {
-  if (lang === "fr") return "fr";
-  if (lang === "de") return "de";
-  if (lang === "es") return "es";
-  if (lang === "it") return "it";
-  if (lang === "nl") return "nl";
-  return "de";
+  if (price >= 1000) return 6.99;
+  if (price >= 500) return 4.99;
+  if (price >= 50) return 2.99;
+  if (price >= 3) return 1.5;
+  return 0.5;
 }
 
 export function Hero() {
   const [lang, setLang] = useState("en");
-  const [country, setCountry] = useState("de");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
-  const [selected, setSelected] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<any | null>(null);
 
   useEffect(() => {
-    const l = navigator.language.slice(0, 2);
-    const chosen = dict[l] ? l : "en";
-    setLang(chosen);
-    setCountry(countryFromLang(chosen));
+    const browserLang = navigator.language.slice(0, 2);
+    setLang(translations[browserLang] ? browserLang : "en");
   }, []);
 
-  const t = dict[lang];
+  const t = translations[lang];
 
-  async function search() {
+  const searchProduct = async () => {
     if (!query.trim()) return;
+
     setLoading(true);
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&gl=${country}&hl=${lang}`);
+    setResults([]);
+
+    const gl =
+      lang === "de" ? "de" :
+      lang === "fr" ? "fr" :
+      lang === "it" ? "it" :
+      lang === "es" ? "es" :
+      "de";
+
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&gl=${gl}&hl=${lang}`);
     const data = await res.json();
-    setResults(data.results || []);
+
+    const sorted = (data.results || []).sort(
+      (a: any, b: any) => (a.extracted_price || 9999999) - (b.extracted_price || 9999999)
+    );
+
+    setResults(sorted);
     setLoading(false);
-  }
+  };
 
   return (
-    <section dir={lang === "ar" ? "rtl" : "ltr"} className="min-h-screen bg-black text-white p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-5xl font-black text-center mb-4">Beylens AI</h1>
-        <p className="text-center text-gray-400 mb-8">
-          Europe AI price comparison — cheapest to highest.
-        </p>
+    <main dir={lang === "ar" ? "rtl" : "ltr"} className="min-h-screen bg-gray-100 text-gray-800">
+      <header className="p-5 bg-blue-600 text-white flex justify-between items-center">
+        <h1 className="text-2xl font-bold">{t.title}</h1>
+        <div className="text-sm">{t.region}</div>
+      </header>
 
-        <div className="bg-zinc-900 p-4 rounded-3xl mb-8">
+      <section className="max-w-4xl mx-auto mt-10 p-5">
+        <div className="bg-white p-8 rounded-lg shadow-md">
           <input
+            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t.placeholder}
-            className="w-full p-4 rounded-2xl bg-white text-black mb-3"
+            className="w-full p-3 border rounded mb-4 text-black"
           />
 
-          <button onClick={search} className="w-full bg-cyan-400 text-black p-4 rounded-2xl font-bold">
-            {loading ? "..." : t.search}
+          <button
+            onClick={searchProduct}
+            className="w-full bg-green-500 text-white font-bold py-3 rounded hover:bg-green-600"
+          >
+            {loading ? t.searching : t.button}
           </button>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
-          {results.map((item, i) => {
-            const real = item.extracted_price || 0;
-            const fee = getFee(real);
-            const total = real ? real + fee : 0;
+        <div className="mt-10 grid gap-6">
+          {results.slice(0, 12).map((item, index) => {
+            const original = item.extracted_price || 0;
+            const fee = getFee(original);
+            const total = original ? original + fee : 0;
 
             return (
-              <div key={i} className="bg-zinc-900 rounded-3xl p-4 border border-zinc-700">
+              <div key={index} className="bg-white p-5 rounded shadow flex gap-4 items-center">
                 {item.thumbnail && (
-                  <img src={item.thumbnail} className="w-full h-56 object-contain bg-white rounded-2xl mb-4" />
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    className="w-24 h-24 object-contain"
+                  />
                 )}
 
-                <h2 className="font-bold text-lg mb-3">{item.title}</h2>
-
-                <div className="bg-black border border-cyan-400 rounded-2xl p-4 text-center mb-3">
-                  <p className="text-gray-400">{t.total}</p>
-                  <p className="text-3xl font-black text-cyan-400">
-                    {real ? `€${total.toFixed(2)}` : item.price || "N/A"}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    {t.price}: {item.price || "N/A"} + {t.fee}: €{fee.toFixed(2)}
-                  </p>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{item.title}</h3>
+                  <p className="text-sm text-gray-500">{item.source || t.available}</p>
                 </div>
 
-                <p className="text-gray-400">{t.store}: {item.source || "Unknown"}</p>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {original ? `€${total.toFixed(2)}` : item.price || "N/A"}
+                  </p>
 
-                <button onClick={() => setSelected(item)} className="w-full mt-4 bg-cyan-400 text-black p-3 rounded-2xl font-bold">
-                  {t.details}
-                </button>
+                  <p className="text-xs text-gray-500">
+                    {item.price} + €{fee.toFixed(2)}
+                  </p>
+
+                  <button
+                    onClick={() => setSelected(item)}
+                    className="bg-orange-500 text-white px-4 py-2 rounded mt-2"
+                  >
+                    {t.details}
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
+      </section>
 
-        {selected && (
-          <div className="fixed inset-0 bg-black/90 z-50 p-4 overflow-auto">
-            <div className="max-w-lg mx-auto bg-zinc-900 rounded-3xl p-5 border border-cyan-400">
-              <button onClick={() => setSelected(null)} className="text-red-400 mb-4">{t.close}</button>
+      {selected && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white text-gray-800 rounded-xl p-6 max-w-md w-full">
+            <button onClick={() => setSelected(null)} className="text-red-500 mb-4">
+              X
+            </button>
 
-              {selected.thumbnail && (
-                <img src={selected.thumbnail} className="w-full h-64 object-contain bg-white rounded-2xl mb-4" />
-              )}
+            {selected.thumbnail && (
+              <img src={selected.thumbnail} className="w-full h-56 object-contain mb-4" />
+            )}
 
-              <h2 className="text-2xl font-bold mb-3">{selected.title}</h2>
+            <h2 className="text-xl font-bold mb-3">{selected.title}</h2>
 
-              <p>{t.store}: {selected.source || "Unknown"}</p>
-              <p>{t.price}: {selected.price || "N/A"}</p>
-              <p>{t.fee}: €{getFee(selected.extracted_price || 0).toFixed(2)}</p>
+            <p>{t.original}: {selected.price || "N/A"}</p>
+            <p>{t.fee}: €{getFee(selected.extracted_price || 0).toFixed(2)}</p>
 
-              <button className="w-full mt-5 bg-cyan-400 text-black p-4 rounded-2xl font-black">
-                {t.unlock}
-              </button>
-            </div>
+            <p className="text-2xl font-bold text-blue-600 mt-3">
+              {t.total}: €
+              {selected.extracted_price
+                ? (selected.extracted_price + getFee(selected.extracted_price)).toFixed(2)
+                : "N/A"}
+            </p>
+
+            <p className="text-sm text-gray-600 mt-4">{t.message}</p>
+
+            <button className="w-full bg-green-500 text-white font-bold py-3 rounded mt-5">
+              {t.unlock}
+            </button>
           </div>
-        )}
-      </div>
-    </section>
+        </div>
+      )}
+    </main>
   );
 }
