@@ -14,7 +14,8 @@ export async function GET(req: Request) {
   const data = await res.json();
 
   const results = (data.shopping_results || []).sort(
-    (a: any, b: any) => (a.extracted_price || 9999999) - (b.extracted_price || 9999999)
+    (a: any, b: any) =>
+      (a.extracted_price || 9999999) - (b.extracted_price || 9999999)
   );
 
   return NextResponse.json({ results });
